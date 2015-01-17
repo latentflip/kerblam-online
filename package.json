@@ -1,0 +1,15 @@
+{
+  "name": "kerblam-2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "kerblam.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "fkit": "^0.16.2",
+    "immutable": "^3.6.2"
+  }
+}
