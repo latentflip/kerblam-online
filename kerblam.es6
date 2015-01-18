@@ -1,37 +1,51 @@
 /* jshint esnext:true */
 import roll from "./dice.es6";
 
+import * as contracts from "./contracts.es6";
+contracts.config.enabled = true;
+
 var im = require('immutable');
 var f = require('fkit');
 
-const makeCard = (i, type, op) => {
+const makeCard = (i, type, op, isRed) => {
     return im.Map({
         id: i,
         type: type,
-        op: op
+        op: op,
+        isRed: isRed
     });
 };
 
-const makeCardFactory = (type, op) => {
-    return (i) => makeCard(i, type, op);
-};
-
-const cardSet = {
-    General: makeCardFactory('General', 10),
-    Medic: makeCardFactory('Medic', 5),
-    Sniper: makeCardFactory('Sniper', 5),
-    Spy: makeCardFactory('Spy', 5),
-    Soldier: makeCardFactory('Soldier', 0),
-    Nuke: makeCardFactory('Nuke', 0)
+const makeCardFactory = (type, op, alternate) => {
+    alternate = alternate || false;
+    var isRed = false;
+    return (i) => {
+        if (alternate) {
+            isRed = !isRed;
+        }
+        return makeCard(i, type, op, isRed);
+    };
 };
 
 
 const makeDeck = (nPlayers) => {
+    var cardSet = {
+        General: makeCardFactory('General', 10, true),
+        Medic: makeCardFactory('Medic', 5, true),
+        Sniper: makeCardFactory('Sniper', 5, true),
+        Spy: makeCardFactory('Spy', 5, true),
+        Soldier: makeCardFactory('Soldier', 0, true),
+        Nuke: makeCardFactory('Nuke', 0)
+    };
+
     var i = 1;
+
     var nSoldiers = (9 * 4);
+
     if (nPlayers > 2) {
         nSoldiers -= 4 * (nPlayers - 1);
     }
+
     var nNukes = nPlayers;
 
     return im.List([
@@ -80,28 +94,41 @@ const armySize = (army) => {
     return army.get('frontLine').size + army.get('covertArmy').size;
 };
 
-const drawToTen = (player) => {
-    var size = armySize(player.get('army'));
-    var toDraw = size < 10 ? (10 - size) : 0;
+const drawCards = (player, n) => {
+    contracts.isNumber(n);
+    contracts.gte(n, 0);
 
-    var nextCard;
+    var nextCard, targetArmy;
 
-    while (toDraw--) {
-        nextCard = player.getIn(['deck', 0]);
-        player = player.updateIn(['army', 'frontLine'], (frontLine) => frontLine.push(nextCard));
+    while (n--) {
+        nextCard = player.get('deck').first();
+        targetArmy = nextCard.get('isRed') ? 'frontLine' : 'covertArmy';
+        player = player.updateIn(['army', targetArmy], (lineup) => lineup.push(nextCard));
         player = player.updateIn(['deck'], (deck) => deck.shift());
     }
 
     return player;
 };
 
-const drawAllToTen = (gameState) => {
-    var name;
-    for (name of gameState.get('players').keys()) {
-        gameState = gameState.updateIn(['players', name], drawToTen);
+
+const drawToTen = (player) => {
+    var size = armySize(player.get('army'));
+    var toDraw = size < 10 ? (10 - size) : 0;
+
+    return drawCards(player, toDraw);
+};
+
+const updatePlayer = f.curry((fn, name, gameState) => {
+    return gameState.updateIn(['players', name], fn);
+});
+
+const updateAllPlayers = f.curry((fn, gameState) => {
+    for (var name of gameState.get('players').keys()) {
+        gameState = gameState.updateIn(['players', name], fn);
     }
     return gameState;
-};
+});
+
 
 const logGameState = (gameState) => {
     gameState.get('players').forEach( (player) => {
@@ -114,8 +141,31 @@ const logGameState = (gameState) => {
     });
 };
 
+const shuffleDeck = (cards) => {
+    return cards.sortBy(Math.random);
+};
+
+const shufflePlayerDeck = (player) => {
+    return player.updateIn(['deck'], shuffleDeck);
+};
+
+const drawAllPlayersToTen = updateAllPlayers(drawToTen);
+const shuffleAllPlayerDecks = updateAllPlayers(shufflePlayerDeck);
+
 var gameState = makeInitialGamestate(['Phil', 'Adam', 'Hilary']);
+
+gameState = shuffleAllPlayerDecks(gameState);
+gameState = drawAllPlayersToTen(gameState);
 logGameState(gameState);
 
-gameState = drawAllToTen(gameState);
-logGameState(gameState);
+const howManyToDraw = (roll) => {
+    var count = roll[0] + roll[1];
+    if (roll[0] !== roll[1]) {
+        count = Math.ceil(count/2);
+    }
+    return count;
+};
+
+const takeTurn = (name) => {
+    var roll2 = roll(2);
+};
