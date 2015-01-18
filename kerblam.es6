@@ -8,6 +8,9 @@ import * as contracts from "./contracts.es6";
 contracts.config.enabled = true;
 
 const sortedRoll = (n) => f.reverse(f.sort(roll(n)));
+const totalRoll = (n) => roll(n).reduce(f.add, 0);
+
+const halfUp = (n) => Math.ceil(n/2);
 
 var partial = (fn, ...args) => {
     return fn.bind(null, ...args);
@@ -269,6 +272,42 @@ const killFirstCard = (player) => {
     return killCard(player, card);
 };
 
+const killFirstCardFromArmyLine = (player, armyLineName) => {
+    contracts.ok(player);
+    var armyLine = player.getIn(['army', armyLineName]);
+    if (armyLine.size === 0) return player;
+
+    var card = armyLine.first();
+    return player.updateIn(['graveyard', 'cards'], (g) => g.push(card))
+                 .updateIn(['army', armyLineName], (cards) => cards.filter( (c) => !im.is(c, card)));
+};
+
+const killNCardsFromArmyLine = (player, armyLineName, n) => {
+    contracts.gte(n, 0);
+    while (n--) {
+        player = killFirstCardFromArmyLine(player, armyLineName);
+    }
+    return player;
+};
+
+const killHalfCardsFromArmyLine = f.curry((armyLineName, player) => {
+    return killNCardsFromArmyLine(player, armyLineName, halfUp(player.getIn(['army', armyLineName]).size));
+});
+
+const killAllCardsFromArmyLine = f.curry((armyLineName, player) => {
+    return killNCardsFromArmyLine(player, armyLineName, player.getIn(['army', armyLineName]).size);
+});
+
+const killNCards = (player, n) => {
+    contracts.gte(n, 0);
+
+    while(n--) {
+        player = killFirstCard(player);
+    }
+
+    return player;
+};
+
 const attack = (attackerName, defenderName, gameState) => {
     var results = attackRoll(
         getPlayer(attackerName, gameState),
@@ -278,18 +317,25 @@ const attack = (attackerName, defenderName, gameState) => {
     var attackerLosses = results.getIn(['attacker', 'losses']);
     var defenderLosses = results.getIn(['defender', 'losses']);
 
-    console.log(attackerLosses, defenderLosses);
+    return gameState.updateIn(['players', attackerName], (player) => killNCards(player, attackerLosses))
+                    .updateIn(['players', defenderName], (player) => killNCards(player, defenderLosses));
+};
 
-    while (attackerLosses--) {
-        gameState = gameState.updateIn(['players', attackerName], killFirstCard);
-    }
+const nuke = (attackerName, defenderName, targetArmy, gameState) => {
+    var roll = totalRoll(2);
 
-    while (defenderLosses--) {
-        gameState = gameState.updateIn(['players', defenderName], killFirstCard);
+    if (roll <= 3) {
+        gameState = updatePlayer(killHalfCardsFromArmyLine('covertArmy'), attackerName, gameState);
+    } else if (roll <= 6) {
+        gameState = updatePlayer(killHalfCardsFromArmyLine(targetArmy), defenderName, gameState);
+    } else if (roll <= 11) {
+        gameState = updatePlayer(killAllCardsFromArmyLine(targetArmy), defenderName, gameState);
+    } else if (roll === 12) {
+        gameState = updatePlayer(killAllCardsFromArmyLine('covertArmy'), defenderName, gameState);
+        gameState = updatePlayer(killAllCardsFromArmyLine('frontLine'), defenderName, gameState);
     }
 
     return gameState;
-
 };
 
 const getPlayer = (name, gameState) => {
@@ -302,4 +348,8 @@ logGameState(gameState);
 
 console.log('-------- Phil Attacks Adam ----------');
 gameState = attack('Phil', 'Adam', gameState);
+logGameState(gameState);
+
+console.log('-------- Phil nukes Adam ---------');
+gameState = nuke('Phil', 'Adam', 'covertArmy', gameState);
 logGameState(gameState);
