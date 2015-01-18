@@ -1,11 +1,18 @@
 /* jshint esnext:true */
+var im = require('immutable');
+var f = require('fkit');
+
 import roll from "./dice.es6";
 
 import * as contracts from "./contracts.es6";
 contracts.config.enabled = true;
 
-var im = require('immutable');
-var f = require('fkit');
+const sortedRoll = (n) => f.reverse(f.sort(roll(n)));
+
+var partial = (fn, ...args) => {
+    return fn.bind(null, ...args);
+};
+
 
 const makeCard = (i, type, op, isRed) => {
     return im.Map({
@@ -94,7 +101,7 @@ const armySize = (army) => {
     return army.get('frontLine').size + army.get('covertArmy').size;
 };
 
-const drawCards = (player, n) => {
+const drawCards = (n, player) => {
     contracts.isNumber(n);
     contracts.gte(n, 0);
 
@@ -115,7 +122,7 @@ const drawToTen = (player) => {
     var size = armySize(player.get('army'));
     var toDraw = size < 10 ? (10 - size) : 0;
 
-    return drawCards(player, toDraw);
+    return drawCards(toDraw, player);
 };
 
 const updatePlayer = f.curry((fn, name, gameState) => {
@@ -129,15 +136,33 @@ const updateAllPlayers = f.curry((fn, gameState) => {
     return gameState;
 });
 
+const flattenArmy = (army) => {
+    return army.get('frontLine').concat(army.get('covertArmy'));
+};
+
+const reduceArmy = (army, fn, initial) => {
+    return flattenArmy(army, fn, initial);
+};
+
+const countOp = (player) => {
+    return flattenArmy(player.get('army')).reduce(
+        (total, card) => total + card.get('op'),
+        0
+    );
+};
+
 
 const logGameState = (gameState) => {
     gameState.get('players').forEach( (player) => {
         console.log('Player:', player.get('name'),
+                    '| OP: ', countOp(player),
                     '| Deck:', player.get('deck').size,
+                    '| Army:', armySize(player.get('army')),
                     '| Grave:', player.getIn(['graveyard', 'cards']).size,
                     '| Used nukes:', player.getIn(['graveyard', 'nukes']).size);
         console.log(player.getIn(['army', 'frontLine']).map( (card) => card.get('id') + '-' + card.get('type') ).join(' '));
         console.log(player.getIn(['army', 'covertArmy']).map( (card) => card.get('id') + '-' + card.get('type') ).join(' '));
+        console.log('');
     });
 };
 
@@ -166,6 +191,115 @@ const howManyToDraw = (roll) => {
     return count;
 };
 
-const takeTurn = (name) => {
+const takeTurn = (name, gameState) => {
     var roll2 = roll(2);
+    console.log('Rolled', roll2);
+    var _drawCards = f.curry(drawCards)(howManyToDraw(roll2));
+
+    return updatePlayer(_drawCards, name, gameState);
 };
+
+const sortDice = (dice) => f.reverse(f.sort(dice));
+
+const compareDieWithAdvantage = (attackDie, defendDie, advantage) => {
+    if (attackDie > defendDie) return 'attacker';
+    if (defendDie > attackDie) return 'defender';
+    return advantage;
+};
+
+const getLossesWithAdvantage = (attackDice, defendDice, advantage) => {
+    var zippedDice = im.List(attackDice).zip(im.List(defendDice));
+    var results = zippedDice.map( (dicePair) => compareDieWithAdvantage(...dicePair, advantage));
+    results = results.countBy( (v) => {
+        return v === 'attacker' ? 'defenderLost' : 'attackerLost';
+    });
+    return {
+        attackerLost: results.get('attackerLost', 0),
+        defenderLost: results.get('defenderLost', 0)
+    };
+};
+
+
+const attackRoll = (attacker, defender) => {
+    var attackDice = sortedRoll(Math.min(3, armySize(attacker.get('army'))));
+    var defendDice = sortedRoll(Math.min(2, armySize(defender.get('army'))));
+    var advantageTo;
+
+    if (defender.get('hasAdvantage') || countOp(defender) > countOp(attacker)) {
+        advantageTo = 'defender';
+    } else {
+        advantageTo = 'attacker';
+    }
+
+    var losses = getLossesWithAdvantage(attackDice, defendDice, advantageTo);
+
+    console.log('Attack!');
+    console.log('Attacker'+(advantageTo === 'attacker' ? '*': ''), attacker.get('name'), attackDice, 'Losses:', losses.attackerLost);
+    console.log('Defender'+(advantageTo === 'defender' ? '*': ''), defender.get('name'), defendDice, 'Losses:', losses.defenderLost);
+
+    return im.Map({
+        attacker: im.Map({
+            player: attacker,
+            roll: attackDice,
+            losses: losses.attackerLost
+        }),
+        defender: im.Map({
+            player: defender,
+            roll: defendDice,
+            losses: losses.defenderLost
+        })
+    });
+
+};
+
+const killCard = (player, card) => {
+    var withoutCard = (list) => list.filter( (c) => !im.is(c, card));
+    contracts.ok(flattenArmy(player.get('army')).contains(card));
+
+    return player.updateIn(['graveyard', 'cards'], (g) => g.push(card))
+                 .updateIn(['army', 'frontLine'], withoutCard)
+                 .updateIn(['army', 'covertArmy'], withoutCard);
+};
+
+const killFirstCard = (player) => {
+    contracts.ok(player);
+    contracts.gt(armySize(player.get('army')), 0);
+
+    var card = player.getIn(['army', 'frontLine', 0]) || player.getIn(['army', 'covertArmy', 0]);
+    return killCard(player, card);
+};
+
+const attack = (attackerName, defenderName, gameState) => {
+    var results = attackRoll(
+        getPlayer(attackerName, gameState),
+        getPlayer(defenderName, gameState)
+    );
+
+    var attackerLosses = results.getIn(['attacker', 'losses']);
+    var defenderLosses = results.getIn(['defender', 'losses']);
+
+    console.log(attackerLosses, defenderLosses);
+
+    while (attackerLosses--) {
+        gameState = gameState.updateIn(['players', attackerName], killFirstCard);
+    }
+
+    while (defenderLosses--) {
+        gameState = gameState.updateIn(['players', defenderName], killFirstCard);
+    }
+
+    return gameState;
+
+};
+
+const getPlayer = (name, gameState) => {
+    return gameState.getIn(['players', name]);
+};
+
+console.log('-------- Phil Starts turn ----------');
+gameState = takeTurn('Phil', gameState);
+logGameState(gameState);
+
+console.log('-------- Phil Attacks Adam ----------');
+gameState = attack('Phil', 'Adam', gameState);
+logGameState(gameState);
