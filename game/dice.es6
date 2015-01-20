@@ -7,9 +7,12 @@ function rollDie() {
     return f.sample(1, die);
 }
 
-function roll(n) {
+function _roll(n) {
     n = n || 1;
     return f.concatMap(rollDie, f.range(1,n));
 }
 
-export default roll;
+export default _roll;
+export var roll = _roll;
+export var totalRoll = (n) => _roll(n).reduce(f.add, 0);
+export var sort = (rolledDice) => f.reverse(f.sort(rolledDice));

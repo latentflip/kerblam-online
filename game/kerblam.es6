@@ -3,8 +3,8 @@ var im = require('immutable');
 var f = require('fkit');
 
 import roll from "./dice.es6";
-
 import * as contracts from "./contracts.es6";
+import * as actions from "./actions.es6";
 contracts.config.enabled = true;
 
 const sortedRoll = (n) => f.reverse(f.sort(roll(n)));
@@ -223,37 +223,37 @@ const getLossesWithAdvantage = (attackDice, defendDice, advantage) => {
 };
 
 
-const attackRoll = (attacker, defender) => {
-    var attackDice = sortedRoll(Math.min(3, armySize(attacker.get('army'))));
-    var defendDice = sortedRoll(Math.min(2, armySize(defender.get('army'))));
-    var advantageTo;
-
-    if (defender.get('hasAdvantage') || countOp(defender) > countOp(attacker)) {
-        advantageTo = 'defender';
-    } else {
-        advantageTo = 'attacker';
-    }
-
-    var losses = getLossesWithAdvantage(attackDice, defendDice, advantageTo);
-
-    console.log('Attack!');
-    console.log('Attacker'+(advantageTo === 'attacker' ? '*': ''), attacker.get('name'), attackDice, 'Losses:', losses.attackerLost);
-    console.log('Defender'+(advantageTo === 'defender' ? '*': ''), defender.get('name'), defendDice, 'Losses:', losses.defenderLost);
-
-    return im.Map({
-        attacker: im.Map({
-            player: attacker,
-            roll: attackDice,
-            losses: losses.attackerLost
-        }),
-        defender: im.Map({
-            player: defender,
-            roll: defendDice,
-            losses: losses.defenderLost
-        })
-    });
-
-};
+//const attackRoll = (attacker, defender) => {
+//    var attackDice = sortedRoll(Math.min(3, armySize(attacker.get('army'))));
+//    var defendDice = sortedRoll(Math.min(2, armySize(defender.get('army'))));
+//    var advantageTo;
+//
+//    if (defender.get('hasAdvantage') || countOp(defender) > countOp(attacker)) {
+//        advantageTo = 'defender';
+//    } else {
+//        advantageTo = 'attacker';
+//    }
+//
+//    var losses = getLossesWithAdvantage(attackDice, defendDice, advantageTo);
+//
+//    console.log('Attack!');
+//    console.log('Attacker'+(advantageTo === 'attacker' ? '*': ''), attacker.get('name'), attackDice, 'Losses:', losses.attackerLost);
+//    console.log('Defender'+(advantageTo === 'defender' ? '*': ''), defender.get('name'), defendDice, 'Losses:', losses.defenderLost);
+//
+//    return im.Map({
+//        attacker: im.Map({
+//            player: attacker,
+//            roll: attackDice,
+//            losses: losses.attackerLost
+//        }),
+//        defender: im.Map({
+//            player: defender,
+//            roll: defendDice,
+//            losses: losses.defenderLost
+//        })
+//    });
+//
+//};
 
 const killCard = (player, card) => {
     var withoutCard = (list) => list.filter( (c) => !im.is(c, card));
@@ -308,35 +308,18 @@ const killNCards = (player, n) => {
     return player;
 };
 
-const attack = (attackerName, defenderName, gameState) => {
-    var results = attackRoll(
-        getPlayer(attackerName, gameState),
-        getPlayer(defenderName, gameState)
-    );
-
-    var attackerLosses = results.getIn(['attacker', 'losses']);
-    var defenderLosses = results.getIn(['defender', 'losses']);
-
-    return gameState.updateIn(['players', attackerName], (player) => killNCards(player, attackerLosses))
-                    .updateIn(['players', defenderName], (player) => killNCards(player, defenderLosses));
-};
-
-const nuke = (attackerName, defenderName, targetArmy, gameState) => {
-    var roll = totalRoll(2);
-
-    if (roll <= 3) {
-        gameState = updatePlayer(killHalfCardsFromArmyLine('covertArmy'), attackerName, gameState);
-    } else if (roll <= 6) {
-        gameState = updatePlayer(killHalfCardsFromArmyLine(targetArmy), defenderName, gameState);
-    } else if (roll <= 11) {
-        gameState = updatePlayer(killAllCardsFromArmyLine(targetArmy), defenderName, gameState);
-    } else if (roll === 12) {
-        gameState = updatePlayer(killAllCardsFromArmyLine('covertArmy'), defenderName, gameState);
-        gameState = updatePlayer(killAllCardsFromArmyLine('frontLine'), defenderName, gameState);
-    }
-
-    return gameState;
-};
+//const attack = (attackerName, defenderName, gameState) => {
+//    var results = attackRoll(
+//        getPlayer(attackerName, gameState),
+//        getPlayer(defenderName, gameState)
+//    );
+//
+//    var attackerLosses = results.getIn(['attacker', 'losses']);
+//    var defenderLosses = results.getIn(['defender', 'losses']);
+//
+//    return gameState.updateIn(['players', attackerName], (player) => killNCards(player, attackerLosses))
+//                    .updateIn(['players', defenderName], (player) => killNCards(player, defenderLosses));
+//};
 
 const getPlayer = (name, gameState) => {
     return gameState.getIn(['players', name]);
@@ -347,9 +330,9 @@ gameState = takeTurn('Phil', gameState);
 logGameState(gameState);
 
 console.log('-------- Phil Attacks Adam ----------');
-gameState = attack('Phil', 'Adam', gameState);
+gameState = actions.attack('Phil', 'Adam', gameState);
 logGameState(gameState);
 
 console.log('-------- Phil nukes Adam ---------');
-gameState = nuke('Phil', 'Adam', 'covertArmy', gameState);
+gameState = actions.nuke('Phil', 'Adam', 'covertArmy', gameState);
 logGameState(gameState);
