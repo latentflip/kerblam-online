@@ -1,5 +1,6 @@
 /* jshint esnext:true */
 var React = require('react');
+var Game = {};
 
 var App = React.createClass({
     render() {
@@ -34,9 +35,36 @@ var Player = React.createClass({
 
 
 var socket = require('socket.io-client')('http://localhost:8080');
+
 socket.on('connect', function () {
+    var [room,name] = window.location.hash.split('@');
+
+    Game.startGame = function () {
+        console.log('Starting game');
+        socket.emit('game:start');
+    };
+
+    socket.emit('game:join', room, name);
+
     socket.on('game:state', function (gameState) {
         React.renderComponent(<App gameState={gameState}/>, document.body);
+    });
+
+    socket.on('game:rejected', function () {
+        React.renderComponent(<p>Sorry, full up!</p>, document.body);
+    });
+
+    socket.on('game:joined', function (status) {
+        if (status.owner) {
+            React.renderComponent(<p>Joined, waiting for start! <button onClick={Game.startGame}>Start!</button></p>, document.body);
+        } else {
+            React.renderComponent(<p>Joined, waiting for start!</p>, document.body);
+        }
+    });
+
+    socket.on('game:started', function () {
+        console.log('Got game started event');
+        React.renderComponent(<p>Started</p>, document.body);
     });
 });
 

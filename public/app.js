@@ -1,8 +1,25 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
 
+var _slicedToArray = function (arr, i) {
+  if (Array.isArray(arr)) {
+    return arr;
+  } else {
+    var _arr = [];
+
+    for (var _iterator = arr[Symbol.iterator](), _step; !(_step = _iterator.next()).done;) {
+      _arr.push(_step.value);
+
+      if (i && _arr.length === i) break;
+    }
+
+    return _arr;
+  }
+};
+
 /* jshint esnext:true */
 var React = require("react");
+var Game = {};
 
 var App = React.createClass({
   displayName: "App",
@@ -64,9 +81,63 @@ var Player = React.createClass({
 
 
 var socket = require("socket.io-client")("http://localhost:8080");
+
 socket.on("connect", function () {
+  var _window$location$hash$split = window.location.hash.split("@");
+
+  var _window$location$hash$split2 = _slicedToArray(_window$location$hash$split, 2);
+
+  var room = _window$location$hash$split2[0];
+  var name = _window$location$hash$split2[1];
+
+
+  Game.startGame = function () {
+    console.log("Starting game");
+    socket.emit("game:start");
+  };
+
+  socket.emit("game:join", room, name);
+
   socket.on("game:state", function (gameState) {
     React.renderComponent(React.createElement(App, { gameState: gameState }), document.body);
+  });
+
+  socket.on("game:rejected", function () {
+    React.renderComponent(React.createElement(
+      "p",
+      null,
+      "Sorry, full up!"
+    ), document.body);
+  });
+
+  socket.on("game:joined", function (status) {
+    if (status.owner) {
+      React.renderComponent(React.createElement(
+        "p",
+        null,
+        "Joined, waiting for start! ",
+        React.createElement(
+          "button",
+          { onClick: Game.startGame },
+          "Start!"
+        )
+      ), document.body);
+    } else {
+      React.renderComponent(React.createElement(
+        "p",
+        null,
+        "Joined, waiting for start!"
+      ), document.body);
+    }
+  });
+
+  socket.on("game:started", function () {
+    console.log("Got game started event");
+    React.renderComponent(React.createElement(
+      "p",
+      null,
+      "Started"
+    ), document.body);
   });
 });
 
