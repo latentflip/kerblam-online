@@ -24,6 +24,9 @@ var Player = React.createClass({
                 <p>
                     Deck {player.deck.length} Army {player.army.frontLine.length + player.army.covertArmy.length}
                 </p>
+                <ul>
+                    {player.army.frontLine.map( (card) => <li>{card.type}</li> )}
+                </ul>
             </div>
         );
     }

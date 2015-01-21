@@ -46,6 +46,17 @@ var Player = React.createClass({
         player.deck.length,
         " Army ",
         player.army.frontLine.length + player.army.covertArmy.length
+      ),
+      React.createElement(
+        "ul",
+        null,
+        player.army.frontLine.map(function (card) {
+          return React.createElement(
+            "li",
+            null,
+            card.type
+          );
+        })
       )
     );
   }
