@@ -1,0 +1,213 @@
+<link rel=stylesheet href=dice.css />
+
+<div class='d6-wrapper'>
+  <div class='d6'>
+    <div class='d6-face d6-1'>1</div>
+    <div class='d6-face d6-2'>2</div>
+    <div class='d6-face d6-3'>3</div>
+    <div class='d6-face d6-4'>4</div>
+    <div class='d6-face d6-5'>5</div>
+    <div class='d6-face d6-6'>6</div>
+  </div>
+  <div class='d6'>
+    <div class='d6-face d6-1'>1</div>
+    <div class='d6-face d6-2'>2</div>
+    <div class='d6-face d6-3'>3</div>
+    <div class='d6-face d6-4'>4</div>
+    <div class='d6-face d6-5'>5</div>
+    <div class='d6-face d6-6'>6</div>
+  </div>
+  <div class='d6'>
+    <div class='d6-face d6-1'>1</div>
+    <div class='d6-face d6-2'>2</div>
+    <div class='d6-face d6-3'>3</div>
+    <div class='d6-face d6-4'>4</div>
+    <div class='d6-face d6-5'>5</div>
+    <div class='d6-face d6-6'>6</div>
+  </div>
+  <div class='d6 d6-white'>
+    <div class='d6-face d6-1'>1</div>
+    <div class='d6-face d6-2'>2</div>
+    <div class='d6-face d6-3'>3</div>
+    <div class='d6-face d6-4'>4</div>
+    <div class='d6-face d6-5'>5</div>
+    <div class='d6-face d6-6'>6</div>
+  </div>
+  <div class='d6 d6-white'>
+    <div class='d6-face d6-1'>1</div>
+    <div class='d6-face d6-2'>2</div>
+    <div class='d6-face d6-3'>3</div>
+    <div class='d6-face d6-4'>4</div>
+    <div class='d6-face d6-5'>5</div>
+    <div class='d6-face d6-6'>6</div>
+  </div>
+</div>
+
+<script>
+  function getPrefix() {
+    if (!window.getComputedStyle) {
+        return false;
+    }
+
+    var el = document.createElement('p'),
+        transforms = {
+            'webkitTransform':'-webkit-transform',
+            'OTransform':'-o-transform',
+            'msTransform':'-ms-transform',
+            'MozTransform':'-moz-transform',
+            'transform':'transform'
+        },
+        prefix;
+
+    // Add it to the body to get the computed style.
+    document.body.insertBefore(el, null);
+
+    for (var t in transforms) {
+      if (!prefix) {
+        if (el.style[t] !== undefined) {
+          el.style[t] = "translate3d(1px,1px,1px)";
+          if (window.getComputedStyle(el).getPropertyValue(transforms[t])) {
+            prefix = t;
+          }
+        }
+      }
+    }
+
+    document.body.removeChild(el);
+    return prefix;
+  }
+
+  var stopLoop = false;
+  var delta = 0.000001;
+  var decelerate = function (velocity, acceleration, time) {
+    if (velocity < delta && velocity > -delta) {
+      return 0;
+    }
+    var newVelocity = Math.abs(velocity) - ( Math.abs(acceleration) * time );
+    if (newVelocity < 0) {
+      return 0;
+    }
+
+    return velocity > 0 ? newVelocity : -newVelocity;
+  }
+
+  function roundToNearest90(n) {
+    var d = n % 90;
+    return n + (90 - d);
+    //if (d < 45) {
+    //  return n - d;
+    //} else {
+    //  return n + (90 - d);
+    //}
+  }
+
+  var transformPrefix = getPrefix();
+
+  var raf = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame;
+
+  raf = raf.bind(window);
+
+  function rollDice(d6) {
+    var linearVelocity = {
+      x: 10 + Math.random() * 20,
+      y: 10 + Math.random() * 20
+    };
+    var distances = {
+      x: 0,
+      y: 0
+    };
+    var linearAcceleration = -0.1;
+
+    var angularVelocity = {
+      x: linearVelocity.x,
+      y: 0.2 * (linearVelocity.x + linearVelocity.y),
+      z: linearVelocity.y
+    };
+    var angles = {
+      x: 0,
+      y: 0,
+      z: 0
+    };
+    var angularAcceleration = -0.1;
+    var window = {};
+    var approach = {};
+
+    raf(function loop(t) {
+      var body = document.body.getBoundingClientRect();
+
+      t = t/1000;
+
+      angles = {
+        x: angles.x + angularVelocity.x * t,
+        y: angles.y + angularVelocity.y * t,
+        z: angles.z + angularVelocity.z * t
+      };
+
+      angularVelocity = {
+        x: Math.max(0, angularVelocity.x + angularAcceleration * t),
+        y: Math.max(0, angularVelocity.y + angularAcceleration * t),
+        z: Math.max(0, angularVelocity.z + angularAcceleration * t)
+      };
+
+      var angularMin = 2.5;
+      var approachSpeed = 0.15;
+      if (angularVelocity.x < angularMin) {
+        if (!approach.x) approach.x = roundToNearest90(angles.x);
+        angles.x += (approach.x - angles.x) * approachSpeed;
+      }
+      if (angularVelocity.y < angularMin) {
+        if (!approach.y) approach.y = roundToNearest90(angles.y);
+        angles.y += (approach.y - angles.y) * approachSpeed;
+      }
+      if (angularVelocity.z < angularMin) {
+        if (!approach.z) approach.z = roundToNearest90(angles.z);
+        angles.z += (approach.z - angles.z) * approachSpeed;
+      }
+
+
+      distances = {
+        x: distances.x + linearVelocity.x * t,
+        y: distances.y + linearVelocity.y * t
+      };
+
+
+      linearVelocity = {
+        x: decelerate(linearVelocity.x, linearAcceleration, t),
+        y: decelerate(linearVelocity.y, linearAcceleration, t)
+      };
+
+      var pad = 100;
+
+      if (distances.x > body.width - pad) {
+        linearVelocity.x  = -1 * Math.abs(linearVelocity.x)
+      }
+
+      if (distances.x < 0 + pad) {
+        linearVelocity.x = Math.abs(linearVelocity.x);
+      }
+
+      if (distances.y > body.height - pad) {
+        linearVelocity.y  = -1 * Math.abs(linearVelocity.y);
+      }
+
+      if (distances.y < 0 + pad) {
+        linearVelocity.y = Math.abs(linearVelocity.y);
+      }
+
+      var tr = [
+        "translateX(", distances.x, "px) ",
+        "translateY(", distances.y, "px) ",
+        "rotateX(", angles.x, "deg) ",
+        "rotateY(", angles.y, "deg) ",
+        "rotateZ(", angles.z, "deg) ",
+      ].join('');
+
+      d6.style[transformPrefix] = tr;
+      if (!stopLoop) {
+        raf(loop);
+      }
+    });
+  }
+
+  [].forEach.call(document.querySelectorAll('.d6'), rollDice);
+</script>
