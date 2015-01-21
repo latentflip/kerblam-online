@@ -71,3 +71,71 @@ body {
   -webkit-transform: rotateY(-180deg) translateZ(50px);
           transform: rotateY(-180deg) translateZ(50px);
 }
+
+dot {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 20px;
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background-color: black;
+}
+
+.d6 dot {
+  background-color: White;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+}
+.d6.d6-white dot {
+  background-color: DodgerBlue;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+}
+
+.d6-2 dot:nth-child(1),
+.d6-3 dot:nth-child(1),
+.d6-4 dot:nth-child(1),
+.d6-5 dot:nth-child(1),
+.d6-6 dot:nth-child(1) {
+  left: 15px;
+  top: 15px;
+}
+
+.d6-1 dot:nth-child(1),
+.d6-3 dot:nth-child(2),
+.d6-5 dot:nth-child(3) {
+  left: 40px;
+  top: 40px;
+}
+
+.d6-2 dot:nth-child(2),
+.d6-3 dot:nth-child(3),
+.d6-4 dot:nth-child(4),
+.d6-5 dot:nth-child(5),
+.d6-6 dot:nth-child(6) {
+  left: 65px;
+  top: 65px;
+}
+
+.d6-4 dot:nth-child(2),
+.d6-5 dot:nth-child(2),
+.d6-6 dot:nth-child(2) {
+  left: 65px;
+  top: 15px;
+}
+
+.d6-4 dot:nth-child(3),
+.d6-5 dot:nth-child(4),
+.d6-6 dot:nth-child(5) {
+  left: 15px;
+  top: 65px;
+}
+
+.d6-6 dot:nth-child(3) {
+  left: 15px;
+  top: 40px;
+}
+.d6-6 dot:nth-child(4) {
+  left: 65px;
+  top: 40px;
+}
