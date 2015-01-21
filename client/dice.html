@@ -42,6 +42,14 @@
     <div class='d6-face d6-5'> <dot></dot> <dot></dot> <dot></dot> <dot></dot> <dot></dot> </div>
     <div class='d6-face d6-6'> <dot></dot> <dot></dot> <dot></dot> <dot></dot> <dot></dot> <dot></dot> </div>
   </div>
+  <div class='d6 d6-white'>
+    <div class='d6-face d6-1'> <dot></dot> </div>
+    <div class='d6-face d6-2'> <dot></dot> <dot></dot> </div>
+    <div class='d6-face d6-3'> <dot></dot> <dot></dot> <dot></dot> </div>
+    <div class='d6-face d6-4'> <dot></dot> <dot></dot> <dot></dot> <dot></dot> </div>
+    <div class='d6-face d6-5'> <dot></dot> <dot></dot> <dot></dot> <dot></dot> <dot></dot> </div>
+    <div class='d6-face d6-6'> <dot></dot> <dot></dot> <dot></dot> <dot></dot> <dot></dot> <dot></dot> </div>
+  </div>
 </div>
 
 <script>
@@ -92,6 +100,12 @@
     return velocity > 0 ? newVelocity : -newVelocity;
   }
 
+  function roundTo(n, target) {
+    var rots = Math.floor(n/360);
+    var rotBase = rots * 360;
+    return rotBase + target;
+  }
+
   function roundToNearest90(n) {
     var d = n % 90;
     return n + (90 - d);
@@ -108,7 +122,8 @@
 
   raf = raf.bind(window);
 
-  function rollDice(d6) {
+  function rollDice(d6, i) {
+    i++;
     var linearVelocity = {
       x: 10 + Math.random() * 20,
       y: 10 + Math.random() * 20
@@ -152,17 +167,43 @@
 
       var angularMin = 2.5;
       var approachSpeed = 0.15;
+      var targetRoll = i;
+      
+      var targets = {
+        1: { x: 180, y: 180, z: '*'},
+        2: { x: 270, y: 0, z: '*'},
+        3: { x: '*', y: 270, z: '*'},
+        4: { x: '*', y: 90, z: '*'},
+        5: { x: 90, y: 0, z: '*'},
+        6: { x: 180, y: 0, z: '*'}
+      };
+
+
       if (angularVelocity.x < angularMin) {
-        if (!approach.x) approach.x = roundToNearest90(angles.x);
-        angles.x += (approach.x - angles.x) * approachSpeed;
+        if (targets[targetRoll] && targets[targetRoll].x !== '*') {
+          if (!approach.x && targets[targetRoll]) {
+            approach.x = roundTo(angles.x, targets[targetRoll].x);
+          }
+          angles.x += (approach.x - angles.x) * approachSpeed;
+        }
       }
+
       if (angularVelocity.y < angularMin) {
-        if (!approach.y) approach.y = roundToNearest90(angles.y);
-        angles.y += (approach.y - angles.y) * approachSpeed;
+        if (targets[targetRoll] && targets[targetRoll].y !== '*') {
+          if (!approach.y && targets[targetRoll]) {
+            approach.y = roundTo(angles.y, targets[targetRoll].y);
+          }
+          angles.y += (approach.y - angles.y) * approachSpeed;
+        }
       }
+
       if (angularVelocity.z < angularMin) {
-        if (!approach.z) approach.z = roundToNearest90(angles.z);
-        angles.z += (approach.z - angles.z) * approachSpeed;
+        if (targets[targetRoll] && targets[targetRoll].z !== '*') {
+          if (!approach.z && targets[targetRoll]) {
+            approach.z = roundTo(angles.z, targets[targetRoll].z);
+          }
+          angles.z += (approach.z - angles.z) * approachSpeed;
+        }
       }
 
 
@@ -198,9 +239,10 @@
       var tr = [
         "translateX(", distances.x, "px) ",
         "translateY(", distances.y, "px) ",
-        "rotateX(", angles.x, "deg) ",
-        "rotateY(", angles.y, "deg) ",
+        "scale(0.5)",
         "rotateZ(", angles.z, "deg) ",
+        "rotateY(", angles.y, "deg) ",
+        "rotateX(", angles.x, "deg) ",
       ].join('');
 
       d6.style[transformPrefix] = tr;

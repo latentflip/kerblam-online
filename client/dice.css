@@ -3,8 +3,8 @@ body {
 }
 
 .d6-wrapper {
-  -webkit-perspective: 1000px;
-          perspective: 1000px;
+  -webkit-perspective: 2000px;
+          perspective: 2000px;
   position: relative;
   width: 100%;
   height: 100%;
@@ -26,7 +26,7 @@ body {
 .d6-white .d6-face {
   background-color: WhiteSmoke;
   color: DodgerBlue;
-  border: 2px rgba(0,0,0,0.1) solid;
+  outline: 2px rgba(0,0,0,0.1) solid;
 }
 
 .d6-face {
@@ -34,7 +34,7 @@ body {
   height: 100px;
   position: absolute;
 
-  border: 2px rgba(255,255,255,0.1) solid;
+  outline: 2px rgba(255,255,255,0.1) solid;
   background-color: OrangeRed;
   color: white;
   text-align: center;
