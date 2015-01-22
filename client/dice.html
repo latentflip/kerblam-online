@@ -53,6 +53,46 @@
 </div>
 
 <script>
+  function collide (ra, rb) {
+      var a = norm(ra), b = norm(rb);
+      var inx = isect(a.left, b.left, b.right)
+          || isect(a.right, b.left, b.right)
+          || inside(a.left, a.right, b.left, b.right)
+          || inside(b.left, b.right, a.left, a.right)
+      ;
+      var iny = isect(a.top, b.top, b.bottom)
+          || isect(a.bottom, b.top, b.bottom)
+          || inside(a.top, a.bottom, b.top, b.bottom)
+          || inside(b.top, b.bottom, a.top, a.bottom)
+      ;
+      return inx && iny;
+  };
+
+  function isect (x, lower, upper) {
+      return x >= lower && x <= upper;
+  }
+
+  function inside (a0, a1, b0, b1) {
+      return a0 >= b0 && a1 <= b1;
+  }
+
+  function norm (q) {
+      var p = {
+          left: q.left,
+          right: q.right,
+          top: q.top,
+          bottom: q.bottom
+      };
+      if (p.left === undefined && q.x) p.left = q.x;
+      if (p.top === undefined && q.y) p.top = q.y;
+      
+      var w = q.width || 0, h = q.height || 0;
+      
+      if (p.right === undefined && q.x) p.right = q.x + w;
+      if (p.bottom === undefined && q.y) p.bottom = q.y + h;
+      return p;
+  }
+
   function getPrefix() {
     if (!window.getComputedStyle) {
         return false;
@@ -122,6 +162,69 @@
 
   raf = raf.bind(window);
 
+  var sepRadius = 28;
+  var collideDice = function (dice) {
+    var collisions = [];
+    dice.forEach(function (d) {
+      var collided;
+      dice.forEach(function (d2) {
+        if (d !== d2 && collide({ left: d.position.x - sepRadius, top: d.position.y - sepRadius, right: d.position.x + sepRadius, bottom: d.position.y + sepRadius },
+                    { left: d2.position.x - sepRadius, top: d2.position.y - sepRadius, right: d2.position.x + sepRadius, bottom: d2.position.y + sepRadius })) {
+          var _dx = d.velocity.x;
+          var _dy = d.velocity.y;
+
+          d.velocity.x = d2.velocity.x;
+          d2.velocity.x = _dx;
+
+          d.velocity.y = d2.velocity.y;
+          d2.velocity.y = _dy;
+
+          var overlapX, overlapY;
+
+          if (d2.position.x > d.position.x) {
+            overlapX = ((2*sepRadius) - (d2.position.x - d.position.x))/2;
+            if (overlapX > 0) {
+              d2.position.x += overlapX;
+              d.position.x -= overlapX;
+            }
+          }
+          if (d2.position.x <= d.position.x) {
+            overlapX = ((2*sepRadius) - (d.position.x - d2.position.x))/2;
+            if (overlapX > 0) {
+              d.position.x += overlapX;
+              d2.position.x -= overlapX;
+            }
+          }
+
+          if (d2.position.y > d.position.y) {
+            overlapY = ((2*sepRadius) - (d2.position.y - d.position.y))/2;
+            if (overlapY > 0) {
+              d2.position.y += overlapY;
+              d.position.y -= overlapY;
+            }
+          }
+          if (d2.position.y <= d.position.y) {
+            overlapY = ((2*sepRadius) - (d.position.y - d2.position.y))/2;
+            if (overlapY > 0) {
+              d.position.y += overlapY;
+              d2.position.y -= overlapY;
+            }
+          }
+        }
+      });
+    });
+  };
+
+  var correctStates = [];
+  function correctDicePositions(die, done) {
+    correctStates.push([die, done]);
+    if (correctStates.length === 6) {
+      collideDice(correctStates.map(function (el) { return el[0]; }));
+      correctStates.map(function (el) { el[1](); });
+      correctStates = [];
+    }
+  }
+
   function rollDice(d6, i) {
     var shadow = document.createElement('div');
     shadow.setAttribute('class', 'd6-shadow');
@@ -180,7 +283,6 @@
             }
           }
       }
-
 
       angles = {
         x: angles.x + angularVelocity.x * t,
@@ -265,32 +367,33 @@
         linearVelocity.y = Math.abs(linearVelocity.y);
       }
 
-      var tr = [
-        "translateX(", distances.x, "px) ",
-        "translateY(", distances.y, "px) ",
-        "translateZ(", vertical.height, "px) ",
-        "scale(0.5)",
-        "rotateZ(", angles.z, "deg) ",
-        "rotateY(", angles.y, "deg) ",
-        "rotateX(", angles.x, "deg) ",
-      ].join('');
+      correctDicePositions({ position: distances, velocity: linearVelocity }, function () {
+        var tr = [
+          "translateX(", distances.x, "px) ",
+          "translateY(", distances.y, "px) ",
+          "translateZ(", vertical.height, "px) ",
+          "scale(0.5)",
+          "rotateZ(", angles.z, "deg) ",
+          "rotateY(", angles.y, "deg) ",
+          "rotateX(", angles.x, "deg) ",
+        ].join('');
 
-      var shadowOffsetX = -(body.width/2 - distances.x);
-      var shadowOffsetY = -(body.height/2 - distances.y);
-      shadowOffsetX = 10 * (shadowOffsetX/(body.width/2));
-      shadowOffsetY = 10 * (shadowOffsetY/(body.height/2));
-      var trShadow = [
-        "translateX(", distances.x + 25 + shadowOffsetX, "px) ",
-        "translateY(", distances.y + 25 + shadowOffsetY, "px) ",
-        "translateZ(", 0, "px) "
-      ].join('');
+        var shadowOffsetX = -(body.width/2 - distances.x);
+        var shadowOffsetY = -(body.height/2 - distances.y);
+        shadowOffsetX = 10 * (shadowOffsetX/(body.width/2));
+        shadowOffsetY = 10 * (shadowOffsetY/(body.height/2));
+        var trShadow = [
+          "translateX(", distances.x + 25 + shadowOffsetX, "px) ",
+          "translateY(", distances.y + 25 + shadowOffsetY, "px) ",
+          "translateZ(", 0, "px) "
+        ].join('');
 
-      shadow.style[transformPrefix] = trShadow;
-
-      d6.style[transformPrefix] = tr;
-      if (!stopLoop) {
-        raf(loop);
-      }
+        shadow.style[transformPrefix] = trShadow;
+        d6.style[transformPrefix] = tr;
+        if (!stopLoop) {
+          raf(loop);
+        }
+      });
     });
   }
 
