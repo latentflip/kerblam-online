@@ -2,6 +2,20 @@ body {
   padding: 0px;
 }
 
+.d6-shadow {
+  width: 50px;
+  height: 50px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 50px;
+  box-shadow: 0 0 24px rgba(0,0,0,0.45);
+  position: absolute;
+  -webkit-transform-style: preserve-3d;
+          transform-style: preserve-3d;
+  -webkit-transform-origin: 50% 50%;
+      -ms-transform-origin: 50% 50%;
+          transform-origin: 50% 50%;
+}
+
 .d6-wrapper {
   -webkit-perspective: 2000px;
           perspective: 2000px;
