@@ -148,10 +148,35 @@
     var window = {};
     var approach = {};
 
+    var vertical = {
+      height: 100,
+      velocity: 10 * Math.random(),
+      acceleration: -0.2,
+      bounciness: 0.5,
+      atRest: false
+    };
+
+
     raf(function loop(t) {
       var body = document.body.getBoundingClientRect();
 
       t = t/1000;
+
+      if (!vertical.atRest) {
+        vertical.height = vertical.height + vertical.velocity * t;
+        vertical.velocity = vertical.velocity + vertical.acceleration * t;
+        if (Math.abs(vertical.velocity) < 2 && Math.abs(vertical.height) < 3) {
+            vertical.velocity = 0;
+            vertical.height = 0;
+            vertical.atRest = true;
+        } else {
+            if (vertical.height < 0) {
+                vertical.height = 0;
+                vertical.velocity = Math.abs(vertical.velocity) * vertical.bounciness;
+            }
+          }
+      }
+
 
       angles = {
         x: angles.x + angularVelocity.x * t,
@@ -168,7 +193,7 @@
       var angularMin = 2.5;
       var approachSpeed = 0.15;
       var targetRoll = i;
-      
+
       var targets = {
         1: { x: 180, y: 180, z: '*'},
         2: { x: 270, y: 0, z: '*'},
@@ -239,6 +264,7 @@
       var tr = [
         "translateX(", distances.x, "px) ",
         "translateY(", distances.y, "px) ",
+        "translateZ(", vertical.height, "px) ",
         "scale(0.5)",
         "rotateZ(", angles.z, "deg) ",
         "rotateY(", angles.y, "deg) ",
