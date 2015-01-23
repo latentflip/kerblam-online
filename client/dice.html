@@ -53,6 +53,50 @@
 </div>
 
 <script>
+  var sounds = {};
+  // Fix up prefixing
+  window.AudioContext = window.AudioContext || window.webkitAudioContext;
+  var context = new AudioContext();
+
+  function loadSound(name, url) {
+    var request = new XMLHttpRequest();
+    request.open('GET', url, true);
+    request.responseType = 'arraybuffer';
+
+    // Decode asynchronously
+    request.onload = function() {
+      context.decodeAudioData(request.response, function(buffer) {
+        sounds[name] = buffer;
+      }, console.log);
+    }
+    request.send();
+  }
+
+  function playSound(buffer) {
+    if (!buffer) return;
+    var source = context.createBufferSource(); // creates a sound source
+    source.buffer = buffer;                    // tell the source which sound to play
+    source.connect(context.destination);       // connect the source to the context's destination (the speakers)
+    source.start(0);                           // play the source now
+  }
+
+  var timer;
+  function playBounceDebounced() {
+    if (timer) {
+      return;
+    }
+    playSound(sounds.bounce);
+    timer = setTimeout(function () {
+      timer = null;
+    }, 20);
+  }
+
+  loadSound('bounce', './bounce.mp3');
+  loadSound('roll', './roll.mp3');
+
+</script>
+
+<script>
   function collide (ra, rb) {
       var a = norm(ra), b = norm(rb);
       var inx = isect(a.left, b.left, b.right)
@@ -280,6 +324,10 @@
             if (vertical.height < 0) {
                 vertical.height = 0;
                 vertical.velocity = Math.abs(vertical.velocity) * vertical.bounciness;
+                if (!vertical.playedSound) {
+                  vertical.playedSound = true;
+                  playSound(sounds.roll);
+                }
             }
           }
       }
@@ -353,18 +401,30 @@
 
       if (distances.x > body.width - pad) {
         linearVelocity.x  = -1 * Math.abs(linearVelocity.x)
+        if (Math.abs(linearVelocity.x) > 0.01) {
+          playBounceDebounced();
+        }
       }
 
       if (distances.x < 0 + pad) {
         linearVelocity.x = Math.abs(linearVelocity.x);
+        if (Math.abs(linearVelocity.x) > 0.01) {
+          playBounceDebounced();
+        }
       }
 
       if (distances.y > body.height - pad) {
         linearVelocity.y  = -1 * Math.abs(linearVelocity.y);
+        if (Math.abs(linearVelocity.y) > 0.01) {
+          playBounceDebounced();
+        }
       }
 
       if (distances.y < 0 + pad) {
         linearVelocity.y = Math.abs(linearVelocity.y);
+        if (Math.abs(linearVelocity.y) > 0.01) {
+          playBounceDebounced();
+        }
       }
 
       correctDicePositions({ position: distances, velocity: linearVelocity }, function () {

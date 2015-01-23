@@ -5,10 +5,7 @@ exports.register = function (server, options, next) {
     var io = require('socket.io').listen(server.select('game').listener,{log:false});
 
     var games = {};
-    //var game = Kerblam.makeInitialGamestate([
-    //    'Phil',
-    //    'Adam'
-    //]);
+
     var pushGameState = function (room, gameState) {
         io.to(room).emit('game:state', gameState.toJS());
     };
@@ -30,9 +27,11 @@ exports.register = function (server, options, next) {
                     games[game].state = Kerblam.makeInitialGamestate(Object.keys(games[game].players));
                     console.log('Got game start');
                     io.to(game).emit('game:started');
-                    setTimeout(function () {
-                        pushGameState(game, games[game].state);
-                    }, 1000);
+                    games[game].state =
+                        Kerblam.drawAllPlayersToTen(
+                            Kerblam.shuffleAllPlayerDecks(games[game].state)
+                        );
+                    pushGameState(game, games[game].state);
                 });
             } else {
                 if (!games[game].started) {
