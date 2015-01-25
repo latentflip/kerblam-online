@@ -1,7 +1,9 @@
 /* jshint esnext:true */
 
 import Army from "./army.es6";
+import Player from "./player.es6";
 import contracts from "./contracts.es6";
+
 var im = require('immutable');
 var f = require('fkit');
 
@@ -99,7 +101,7 @@ export const makeInitialGamestate = (players) => {
     var _makePlayer = f.curry(makePlayer)(players.length);
 
     var gameState = im.Map({
-        players: im.Map(im.List(players).map((name) => [ name, _makePlayer(name) ]))
+        players: im.Map(im.List(players).map((name) => [ name, _makePlayer(name) ])),
     });
     return gameState;
 };
@@ -138,3 +140,21 @@ const shufflePlayerDeck = (player) => {
 
 export const drawAllPlayersToTen = updateAllPlayers(drawToTen);
 export const shuffleAllPlayerDecks = updateAllPlayers(shufflePlayerDeck);
+
+
+const replaceDecksWithSizes = (player) => {
+    
+};
+
+export const cleanseForPlayer = (gameState, playerName) => {
+    var cleanse = (player) => {
+        player = Player.hideHiddenCards(player);
+        if (player.get('name') !== playerName) {
+            console.log('Hiding', player.get('name'), 'cards from', playerName);
+            player = Player.hideCovertCards(player);
+        }
+        return player;
+    };
+
+    return updateAllPlayers(cleanse, gameState);
+};

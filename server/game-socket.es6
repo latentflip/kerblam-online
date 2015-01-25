@@ -1,8 +1,11 @@
 /* jshint esnext:true */
 import Kerblam from "../game/game.es6";
 
+import GameController from "./game-controller.es6";
+
 exports.register = function (server, options, next) {
     var io = require('socket.io').listen(server.select('game').listener,{log:false});
+    GameController.config.io = io;
 
     var games = {};
 
@@ -11,45 +14,52 @@ exports.register = function (server, options, next) {
     };
 
     io.sockets.on('connection', function (socket) {
-        socket.on('game:join', function (game, player) {
-            if (!games[game]) {
-                games[game] = {
-                    name: game,
-                    started: false,
-                    owner: player,
-                    players: {
-                        [player]: socket
-                    }
-                };
-                socket.join(game);
-                socket.emit('game:joined', { owner: true });
-                socket.on('game:start', function () {
-                    games[game].state = Kerblam.makeInitialGamestate(Object.keys(games[game].players));
-                    console.log('Got game start');
-                    io.to(game).emit('game:started');
-                    games[game].state =
-                        Kerblam.drawAllPlayersToTen(
-                            Kerblam.shuffleAllPlayerDecks(games[game].state)
-                        );
-                    pushGameState(game, games[game].state);
-                });
-            } else {
-                if (!games[game].started) {
-                    games[game].players[player] = socket;
-                    socket.emit('game:joined', { owner: player === games[game].owner });
-                    if (player === games[game].owner) {
-                        socket.join(game);
-                        socket.on('game:start', function () {
-                            console.log('Got game start');
-                            io.to(game).emit('game:started');
-                        });
-                    }
-                } else {
-                    socket.emit('game:rejected');
-                }
-            }
-            console.log(Object.keys(games[game].players));
+        socket.on('game:join', function (gameName, playerName) {
+            GameController.createAndJoin(gameName, playerName, socket, function () {
+                socket.emit('game:joined', gameName);
+            });
         });
+
+        socket.on('game:start', GameController.startGameFromPlayerId.bind(GameController, socket.id));
+
+        socket.on('disconnect', GameController.removeSocketId.bind(GameController, socket.id));
+            //if (!games[game]) {
+            //    games[game] = {
+            //        name: game,
+            //        started: false,
+            //        owner: player,
+            //        players: {
+            //            [player]: socket
+            //        }
+            //    };
+            //    socket.join(game);
+            //    socket.emit('game:joined', { owner: true });
+            //    socket.on('game:start', function () {
+            //        games[game].state = Kerblam.makeInitialGamestate(Object.keys(games[game].players));
+            //        console.log('Got game start');
+            //        io.to(game).emit('game:started');
+            //        games[game].state =
+            //            Kerblam.drawAllPlayersToTen(
+            //                Kerblam.shuffleAllPlayerDecks(games[game].state)
+            //            );
+            //        pushGameState(game, games[game].state);
+            //    });
+            //} else {
+            //    if (!games[game].started) {
+            //        games[game].players[player] = socket;
+            //        socket.emit('game:joined', { owner: player === games[game].owner });
+            //        if (player === games[game].owner) {
+            //            socket.join(game);
+            //            socket.on('game:start', function () {
+            //                console.log('Got game start');
+            //                io.to(game).emit('game:started');
+            //            });
+            //        }
+            //    } else {
+            //        socket.emit('game:rejected');
+            //    }
+            //}
+            //console.log(Object.keys(games[game].players));
         //console.log('Player joined');
         //socket.emit('game:state', game.toJS());
         //setTimeout(function () {

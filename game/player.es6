@@ -66,3 +66,14 @@ export const killNCards = (player, n) => {
 
     return player;
 };
+
+var getSize = (deck) => deck.size;
+
+export const hideHiddenCards = (player) => {
+    return player.updateIn(['deck'], getSize)
+                 .updateIn(['graveyard', 'cards'], getSize);
+};
+
+export const hideCovertCards = (player) => {
+    return player.updateIn(['army', 'covertArmy'], getSize);
+};
